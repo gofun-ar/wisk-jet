@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jet — Control de inventario y desviación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F7F5;
+  --surface:#FFFFFF;
+  --ink:#151B1E;
+  --ink-soft:#5C6A6E;
+  --line:#DDE2DF;
+  --deep:#0F4C4A;
+  --deep-soft:#E3EEEC;
+  --moss:#2F6B4F;
+  --clay:#B4562B;
+  --crimson:#962C2C;
+  --amber:#B8860B;
+  --noise:#C3CEC9;
+  --radius:3px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Archivo',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px;line-height:1.5;
+  font-variant-numeric:tabular-nums;
+}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+a{color:var(--deep)}
+
+/* ---------- shell ---------- */
+.shell{display:flex;min-height:100vh}
+nav{
+  width:212px;flex:0 0 212px;background:var(--surface);
+  border-right:1px solid var(--line);padding:22px 0;position:sticky;top:0;height:100vh;
+  overflow-y:auto;
+}
+.brand{padding:0 20px 20px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.brand h1{font-size:19px;font-weight:700;margin:0;letter-spacing:-.02em}
+.brand p{margin:3px 0 0;font-size:12.5px;color:var(--ink-soft)}
+nav a{
+  display:block;padding:8px 20px;font-size:14px;color:var(--ink-soft);
+  text-decoration:none;border-left:2px solid transparent;
+}
+nav a:hover{color:var(--ink);background:var(--paper)}
+nav a.on{color:var(--deep);border-left-color:var(--deep);font-weight:600;background:var(--deep-soft)}
+nav a:focus-visible{outline:2px solid var(--deep);outline-offset:-2px}
+.navfoot{padding:16px 20px 0;margin-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft)}
+
+main{flex:1;min-width:0;padding:28px 34px 70px;max-width:1180px}
+section{margin-bottom:46px;scroll-margin-top:20px}
+h2{font-size:15px;font-weight:600;margin:0 0 3px;letter-spacing:-.01em}
+h2 + .sub{margin:0 0 16px;font-size:13.5px;color:var(--ink-soft);max-width:66ch}
+
+/* ---------- hero ---------- */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px 26px;margin-bottom:34px}
+.hero-top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.hero-top h2{font-size:17px}
+.period{font-size:13px;color:var(--ink-soft)}
+.split{display:flex;height:46px;border-radius:2px;overflow:hidden;border:1px solid var(--line)}
+.split div{display:flex;align-items:center;padding:0 14px;font-size:13.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden}
+.seg-noise{background:var(--noise);color:var(--ink)!important}
+.seg-real{background:var(--deep)}
+.split-legend{display:flex;gap:24px;margin-top:14px}
+.split-legend div{font-size:13px;color:var(--ink-soft)}
+.split-legend .lg-noise{flex:0 0 auto;width:56%}
+.split-legend .lg-real{flex:1}
+.split-legend b{display:block;font-size:21px;font-weight:700;color:var(--ink);letter-spacing:-.02em;margin-bottom:1px}
+.verdict{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;max-width:74ch}
+
+/* ---------- kpi ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.kpi{background:var(--surface);padding:15px 16px}
+.kpi span{display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:5px}
+.kpi b{display:block;font-size:20px;font-weight:700;letter-spacing:-.025em}
+.kpi em{display:block;font-style:normal;font-size:12.5px;margin-top:4px;color:var(--ink-soft)}
+.up{color:var(--crimson)}.down{color:var(--moss)}
+
+/* ---------- tables ---------- */
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px}
+th,td{padding:9px 13px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--ink-soft);font-size:12.5px;background:var(--paper);position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FAFBFA}
+tfoot td{font-weight:700;background:var(--paper);border-top:2px solid var(--line)}
+.neg{color:var(--crimson)}.pos{color:var(--moss)}
+.muted{color:var(--ink-soft)}
+.tag{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11.5px;font-weight:600;background:var(--deep-soft);color:var(--deep)}
+.tag.warn{background:#FBF0DC;color:var(--amber)}
+.tag.bad{background:#F8E6E6;color:var(--crimson)}
+.txt23 td:nth-child(2),.txt23 td:nth-child(3){text-align:left}
+
+/* ---------- charts ---------- */
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 18px 10px}
+.chart + .chart{margin-top:16px}
+.chart h3{font-size:14px;font-weight:600;margin:0 0 2px}
+.chart p.note{margin:0 0 14px;font-size:12.5px;color:var(--ink-soft);max-width:70ch}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.grid-line{stroke:var(--line);stroke-width:1}
+.axis-txt{font-size:11px;fill:var(--ink-soft)}
+.legend{display:flex;gap:20px;flex-wrap:wrap;margin:10px 0 6px;font-size:12.5px;color:var(--ink-soft)}
+.legend i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:6px}
+.legend i.dash{height:0;border-top:3px dashed currentColor}
+
+/* ---------- callout / empty ---------- */
+.callout{border:1px solid var(--line);border-left:3px solid var(--amber);background:var(--surface);padding:15px 17px;border-radius:var(--radius);font-size:13.5px;max-width:80ch}
+.callout b{display:block;margin-bottom:3px}
+.callout.bad{border-left-color:var(--crimson)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius);padding:26px;text-align:center}
+.empty b{display:block;font-size:15px;margin-bottom:6px}
+.empty p{margin:0 auto;max-width:56ch;font-size:13.5px;color:var(--ink-soft)}
+.cover{display:inline-flex;align-items:baseline;gap:8px;margin-top:14px;font-size:13px;color:var(--ink-soft)}
+.cover b{display:inline;font-size:26px;font-weight:700;color:var(--ink)}
+
+footer{border-top:1px solid var(--line);padding-top:16px;font-size:12.5px;color:var(--ink-soft);max-width:80ch}
+
+@media(max-width:860px){
+  .shell{flex-direction:column}
+  nav{width:auto;height:auto;position:static;flex:0 0 auto;border-right:none;border-bottom:1px solid var(--line);padding:16px 0 0}
+  .brand{padding:0 18px 14px}
+  nav .links{display:flex;overflow-x:auto;gap:2px;padding:0 12px}
+  nav a{white-space:nowrap;border-left:none;border-bottom:2px solid transparent;padding:8px 10px}
+  nav a.on{border-left:none;border-bottom-color:var(--deep);background:none}
+  .navfoot{display:none}
+  main{padding:20px 16px 50px}
+  .split{height:28px}
+  .split div{font-size:0;padding:0}
+  .split-legend{flex-direction:column;gap:14px}
+  .split-legend .lg-noise{width:auto;border-left:4px solid var(--noise);padding-left:11px}
+  .split-legend .lg-real{border-left:4px solid var(--deep);padding-left:11px}
+  .hero{padding:18px 16px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav>
+  <div class="brand"><h1>Jet</h1><p>Control de inventario · Wisk</p></div>
+  <div class="links">
+    <a href="#ahora" class="on">Última semana</a>
+    <a href="#semanas">Reportes semanales</a>
+    <a href="#mensual">Resumen mensual</a>
+    <a href="#costos">Costos</a>
+    <a href="#tendencias">Tendencias</a>
+    <a href="#agotamientos">Agotamientos</a>
+  </div>
+  <div class="navfoot">Datos al 10 sep 2026<br>Cortes de inventario Nancy Díaz</div>
+</nav>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<section id="ahora">
+  <div class="hero">
+    <div class="hero-top">
+      <h2>De los $929.465 que Wisk reporta como desviación, $88.843 es diferencia real</h2>
+      <span class="period">1 al 8 de septiembre · 3 noches</span>
+    </div>
+
+    <div class="split" role="img" aria-label="90% de la desviación es ruido de códigos duplicados; 10% es diferencia real">
+      <div class="seg-noise" style="width:90.4%">Códigos duplicados de gaseosas y mixers</div>
+      <div class="seg-real" style="width:9.6%">Real</div>
+    </div>
+
+    <div class="split-legend">
+      <div class="lg-noise"><b>$840.622</b>Cuatro códigos venden con inventario congelado: el stock entra y se cuenta en su código gemelo, que vale la mitad.</div>
+      <div class="lg-real"><b>$88.843</b>0,35% del consumo. Dentro de lo esperable para medición de botella abierta.</div>
+    </div>
+
+    <p class="verdict">No hay faltante de mercadería en el período. El número grande del encabezado de Wisk es diferencial de costo entre códigos gemelos, no pérdida, y va a seguir creciendo hasta que se corrija el mapeo del punto de venta. Las bajas por eventos, roturas y consumo interno se miden aparte, en Agotamientos.</p>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><span>Ventas</span><b class="num">$129.407.843</b><em>3 noches (jue, vie, sáb)</em></div>
+    <div class="kpi"><span>Costo de mercadería</span><b class="num">$25.206.972</b><em>lo que salió del stock</em></div>
+    <div class="kpi"><span>Costo real</span><b class="num">19,48%</b><em class="down">0,72 pp bajo el objetivo</em></div>
+    <div class="kpi"><span>Desviación en costo</span><b class="num">$929.465</b><em>90% códigos duplicados</em></div>
+    <div class="kpi"><span>Desviación real</span><b class="num">$88.843</b><em>0,35% del consumo</em></div>
+    <div class="kpi"><span>Encogimiento</span><b class="num">−1,78%</b><em>dentro de la banda habitual</em></div>
+  </div>
+</section>
+
+<!-- ============ SEMANAS ============ -->
+<section id="semanas">
+  <h2>Reportes semanales</h2>
+  <p class="sub">Cada fila es un período entre dos conteos de inventario. Las semanas varían entre 2 y 3 noches operativas, por eso conviene leer los porcentajes y no los pesos.</p>
+  <div class="wrap">
+  <table>
+    <thead><tr>
+      <th>Período</th><th>Ventas</th><th>Costo de mercadería</th><th>Costo real</th>
+      <th>Objetivo</th><th>Desviación</th><th>Desviación real</th><th>% del consumo</th><th>Encogimiento</th>
+    </tr></thead>
+    <tbody id="tb-sem"></tbody>
+  </table>
+  </div>
+
+</section>
+
+<!-- ============ MENSUAL ============ -->
+<section id="mensual">
+  <h2>Resumen mensual</h2>
+  <p class="sub">Meses armados con los cortes de inventario que los cubren, no con semanas calendario.</p>
+  <div class="wrap">
+  <table>
+    <thead><tr><th>Mes</th><th>Semanas</th><th>Ventas</th><th>Costo de mercadería</th><th>Costo real</th><th>Desviación</th><th>% de ventas</th></tr></thead>
+    <tbody id="tb-mes"></tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ COSTOS ============ -->
+<section id="costos">
+  <h2>Costos</h2>
+  <p class="sub">El costo objetivo sale de las recetas y del costo unitario del maestro de artículos. El real sale del inventario contado. La brecha entre ambos es lo que la operación gana o pierde contra su propia receta.</p>
+
+  <div class="chart">
+    <h3>Costo real contra costo objetivo</h3>
+    <p class="note">El costo real viene por debajo del objetivo todas las semanas: la operación consume menos de lo que la receta predice.</p>
+    <div id="c-costos"></div>
+    <div class="legend">
+      <span style="color:var(--deep)"><i style="background:currentColor"></i>Costo real</span>
+      <span style="color:var(--ink-soft)"><i class="dash"></i>Costo objetivo</span>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    <b>El costo objetivo subió 143 puntos base en un mes</b>
+    18,77% → 19,22% → 20,04% → 20,20%. Una corrección de conteo no mueve el costo teórico: eso depende de recetas y del costo del maestro. La suba se frenó en la última semana (+16 pb). Mientras tanto, comparar la brecha objetivo-real contra julio no es una comparación homogénea.
+  </div>
+</section>
+
+<!-- ============ TENDENCIAS ============ -->
+<section id="tendencias">
+  <h2>Tendencias de indicadores</h2>
+  <p class="sub">La desviación que informa Wisk se lee mal mientras convivan códigos duplicados en el maestro. El número que importa es el que queda al descontarlos.</p>
+
+  <div class="chart">
+    <h3>Desviación reportada y diferencia real</h3>
+    <p class="note">La barra clara es lo que informa Wisk; la de adentro, lo que queda al descontar los códigos duplicados. El porcentaje es sobre el consumo del período, que es lo que permite comparar semanas de distinta cantidad de noches. Dos semanas se salen de la banda habitual.</p>
+    <div id="c-desv"></div>
+    <div class="legend">
+      <span style="color:var(--noise)"><i style="background:currentColor"></i>Desviación reportada</span>
+      <span style="color:var(--deep)"><i style="background:currentColor"></i>Diferencia real, bajo el 2% del consumo</span>
+      <span style="color:var(--clay)"><i style="background:currentColor"></i>Diferencia real por encima del 2%</span>
+    </div>
+  </div>
+
+  <div class="chart">
+    <h3>Encogimiento</h3>
+    <p class="note">Porcentaje del inventario que no se explica por ventas. Se mantiene en una banda estrecha entre −0,3% y −1,9% en toda la serie.</p>
+    <div id="c-enc"></div>
+  </div>
+
+  <div class="chart">
+    <h3>Diferencia real por barra, últimas cuatro semanas</h3>
+    <p class="note">Cada barra del local con sus cuatro últimos períodos, en porcentaje sobre el consumo de esa barra. Sirve para separar una barra con un desvío puntual de una que arrastra el mismo problema semana tras semana.</p>
+    <div id="c-barras"></div>
+    <div class="legend" id="lg-barras"></div>
+    <p class="note" style="margin:10px 0 0">Barra 6 concentra tres cuartos del consumo del local y se mantiene pegada a cero en los cuatro períodos. Barra 5 lleva desvío positivo en todos, y Barra 2 negativo en todos: dos patrones persistentes, de signo opuesto.</p>
+  </div>
+</section>
+
+<!-- ============ AGOTAMIENTOS ============ -->
+<section id="agotamientos">
+  <h2>Agotamientos</h2>
+  <p class="sub">Bajas de stock que no son venta: eventos y cócteles de marca, consumo interno, producto vencido o en mal estado y roturas. Valuadas al costo de sistema.</p>
+
+  <div class="kpis" style="margin-bottom:20px">
+    <div class="kpi"><span>Agosto</span><b class="num">$2.250.937</b><em>3,30% del costo de mercadería</em></div>
+    <div class="kpi"><span>Julio</span><b class="num">$1.062.040</b><em>1,70% del costo de mercadería</em></div>
+    <div class="kpi"><span>Variación</span><b class="num">+112%</b><em>casi todo por eventos de marca</em></div>
+    <div class="kpi"><span>Merma genuina en agosto</span><b class="num">$160.595</b><em>vencido, mal estado y rotura</em></div>
+  </div>
+
+  <div class="chart">
+    <h3>A dónde va el costo agotado</h3>
+    <p class="note">El crecimiento del mes no es merma: nueve de cada diez pesos agotados en agosto son eventos y cócteles de marca.</p>
+    <div id="c-agot"></div>
+    <div class="legend">
+      <span style="color:var(--ink-soft)"><i style="background:currentColor"></i>Julio</span>
+      <span style="color:var(--deep)"><i style="background:currentColor"></i>Agosto</span>
+    </div>
+  </div>
+
+  <div class="chart" style="margin-top:16px">
+    <h3>Agotamientos por semana</h3>
+    <p class="note">En porcentaje sobre el consumo de cada período de inventario, que es la misma base con la que se mide la desviación. Los picos coinciden con semanas de evento de marca.</p>
+    <div id="c-agotsem"></div>
+  </div>
+
+  <div class="wrap" style="margin-top:16px">
+  <table>
+    <thead><tr><th>Motivo</th><th style="text-align:left">Fecha</th><th style="text-align:left">Zona</th><th>Costo</th><th>% del mes</th></tr></thead>
+    <tbody id="tb-agot" class="txt23"></tbody>
+    <tfoot><tr><td>Total agosto</td><td></td><td></td><td class="num">$2.250.937</td><td class="num">100%</td></tr></tfoot>
+  </table>
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    <b>El 91% del costo agotado se carga en el Depósito</b>
+    Son $2.045.588 de agosto (79% en julio). El depósito no vende: todo agotamiento cargado ahí le genera consumo a una zona que por método debería cerrar en cero, y ensucia la lectura del reporte semanal. Cargar la baja en la barra donde efectivamente se sirvió resolvería las dos cosas.
+  </div>
+
+  <div class="callout" style="margin-top:12px">
+    <b>Dos cosas que limitan la lectura de estas cifras</b>
+    Stella Artois figura valuada a $0,01 — las 120 cajas del evento del 15 de agosto entraron por $48 en total —, el mismo error de precio del maestro que aparece en las facturas: hasta corregirlo, los totales son un piso y no la cifra final. Y hay trece etiquetas de motivo para cuatro conceptos ("Botellas vencidas", "Vencido / pinchados" y "Mal estado" son lo mismo), lo que impide comparar un mes contra otro.
+  </div>
+</section>
+
+<footer>
+  Elaborado sobre los reportes de Desviación de Wisk, entre conteos de inventario de Nancy Díaz.
+  Cada semana queda registrada con los valores vigentes al momento de cerrarla. Si más tarde se corrige una carga en Wisk, el sistema recalcula ese período y puede mostrar cifras distintas de las publicadas acá.
+</footer>
+
+</main>
+</div>
+
+<script>
+/* =====================================================================
+   DATOS — este es el único bloque que se regenera cada semana.
+   Los valores son los publicados al cierre de cada período.
+   ===================================================================== */
+const SEMANAS = [
+ {id:"30 jun – 6 jul",  mes:"Julio",      ventas:69032994,  cogs:11932814, real:17.29, obj:17.98, desv:476387,  limpia:90625,  enc:-0.77, agot:56392},
+ {id:"6 – 14 jul",      mes:"Julio",      ventas:112174683, cogs:20350443, real:18.14, obj:18.90, desv:848970,  limpia:28374,  enc:-1.42, agot:0},
+ {id:"14 – 21 jul",     mes:"Julio",      ventas:94499297,  cogs:17997457, real:19.05, obj:19.22, desv:168953,  limpia:58335,  enc:-0.31, agot:437975},
+ {id:"21 – 27 jul",     mes:"Julio",      ventas:70504504,  cogs:12152266, real:17.24, obj:18.78, desv:1086984, limpia:364713, enc:-1.93, agot:566415},
+ {id:"5 – 10 ago",      mes:"Agosto",     ventas:82864896,  cogs:14067535, real:16.98, obj:18.17, desv:987347,  limpia:377939, enc:-1.87, agot:664913},
+ {id:"10 – 18 ago",     mes:"Agosto",     ventas:127527097, cogs:23490014, real:18.42, obj:18.85, desv:551490,  limpia:103294, enc:-1.00, agot:253490},
+ {id:"18 – 25 ago",     mes:"Agosto",     ventas:81515974,  cogs:15166700, real:18.61, obj:19.22, desv:501937,  limpia:14131,  enc:-1.01, agot:25278},
+ {id:"25 ago – 1 sep",  mes:"Agosto",     ventas:80563612,  cogs:15416062, real:19.14, obj:20.04, desv:729057,  limpia:59013,  enc:-1.46, agot:423789},
+ {id:"1 – 8 sep",       mes:"Septiembre", ventas:129407843, cogs:25206972, real:19.48, obj:20.20, desv:929465,  limpia:88843,  enc:-1.78, agot:471219}
+];
+
+const BARRAS = [
+ {n:"Barra 6 (Despacho)", v:-9155,  consumo:18586533},
+ {n:"Barra 1",            v:41236,  consumo:1785665},
+ {n:"Barra 3",            v:17821,  consumo:1394190},
+ {n:"Barra 4 (J. Walker)",v:-9126,  consumo:1081924},
+ {n:"Barra 5 (Terraza)",  v:49159,  consumo:1316819},
+ {n:"Barra 2",            v:-934,   consumo:1019212},
+ {n:"Depósito",           v:0,      consumo:null}
+];
+
+/* ---------- formato ---------- */
+const ars = n => "$" + Math.round(Math.abs(n)).toLocaleString("es-AR");
+const signo = n => (n<0?"−":"") + ars(n);
+const pct = (n,d=2) => (n<0?"−":"") + Math.abs(n).toFixed(d).replace(".",",") + "%";
+
+/* ---------- tabla semanal ---------- */
+document.getElementById("tb-sem").innerHTML = SEMANAS.slice().reverse().map(s=>`
+  <tr>
+    <td>${s.id}</td>
+    <td class="num">${ars(s.ventas)}</td>
+    <td class="num">${ars(s.cogs)}</td>
+    <td class="num">${pct(s.real)}</td>
+    <td class="num muted">${s.obj===null?"\u2014":pct(s.obj)}</td>
+    <td class="num">${ars(s.desv)}</td>
+    <td class="num">${ars(s.limpia)}</td>
+    <td class="num ${s.limpia/s.cogs>0.02?'neg':''}">${pct(s.limpia/s.cogs*100)}</td>
+    <td class="num">${pct(s.enc)}</td>
+  </tr>`).join("");
+
+/* ---------- tabla mensual ---------- */
+const meses = {};
+SEMANAS.forEach(s=>{
+  const m = meses[s.mes] ||= {n:0,ventas:0,cogs:0,desv:0};
+  m.n++; m.ventas+=s.ventas; m.cogs+=s.cogs; m.desv += s.desv;
+});
+document.getElementById("tb-mes").innerHTML = Object.entries(meses).map(([k,m])=>`
+  <tr><td>${k}${m.n<4?' <span class="tag warn">parcial</span>':''}</td>
+  <td class="num">${m.n}</td>
+  <td class="num">${ars(m.ventas)}</td>
+  <td class="num">${ars(m.cogs)}</td>
+  <td class="num">${pct(m.cogs/m.ventas*100)}</td>
+  <td class="num">${ars(m.desv)}</td>
+  <td class="num">${pct(m.desv/m.ventas*100)}</td></tr>`).join("");
+
+/* ===================== charts (SVG a mano) ===================== */
+const W=760, PAD={t:14,r:14,b:40,l:52};
+const svgEl = (h) => `<svg viewBox="0 0 ${W} ${h}" preserveAspectRatio="xMidYMid meet" role="img">`;
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+function ejeX(h, labels){
+  const iw = W-PAD.l-PAD.r, step = iw/labels.length;
+  return labels.map((l,i)=>{
+    const x = PAD.l + step*(i+.5);
+    const corto = l.replace(" – ","–").replace(/ (jul|ago|sep)/,"$1");
+    return `<text class="axis-txt" x="${x}" y="${h-PAD.b+16}" text-anchor="middle">${esc(corto)}</text>`;
+  }).join("");
+}
+function grillaY(h, min, max, fmt, n=4){
+  let o="";
+  for(let i=0;i<=n;i++){
+    const val = min + (max-min)*i/n;
+    const y = h-PAD.b - (h-PAD.b-PAD.t)*i/n;
+    o += `<line class="grid-line" x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}"/>`;
+    o += `<text class="axis-txt" x="${PAD.l-8}" y="${y+3.5}" text-anchor="end">${fmt(val)}</text>`;
+  }
+  return o;
+}
+
+/* --- costos: real vs objetivo --- */
+(function(){
+  const h=280, d=SEMANAS, min=16, max=21;
+  const iw=W-PAD.l-PAD.r, step=iw/d.length;
+  const X=i=>PAD.l+step*(i+.5);
+  const Y=v=>h-PAD.b-(v-min)/(max-min)*(h-PAD.b-PAD.t);
+  const line = (key,extra) => d.map((s,i)=> s[key]===null?null:`${X(i)},${Y(s[key])}`)
+                 .filter(Boolean).join(" ");
+  let o = svgEl(h) + grillaY(h,min,max,v=>v.toFixed(1).replace(".",",")+"%") + ejeX(h,d.map(s=>s.id));
+  o += `<polyline fill="none" stroke="var(--ink-soft)" stroke-width="1.6" stroke-dasharray="5 4" points="${line("obj")}"/>`;
+  o += `<polyline fill="none" stroke="var(--deep)" stroke-width="2.4" points="${line("real")}"/>`;
+  d.forEach((s,i)=>{ o += `<circle cx="${X(i)}" cy="${Y(s.real)}" r="3.4" fill="var(--deep)"><title>${s.id}: real ${pct(s.real)}${s.obj?" · objetivo "+pct(s.obj):""}</title></circle>`; });
+  document.getElementById("c-costos").innerHTML = o + "</svg>";
+})();
+
+/* --- desviación reportada vs limpia --- */
+(function(){
+  const h=320, d=SEMANAS, max=1200000;
+  const iw=W-PAD.l-PAD.r, step=iw/d.length, bw=Math.min(38,step*.52);
+  const Y=v=>h-PAD.b-(v/max)*(h-PAD.b-PAD.t);
+  let o = svgEl(h)
+    + `<defs><pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+         <rect width="6" height="6" fill="#EEF1EF"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--noise)" stroke-width="2"/>
+       </pattern></defs>`
+    + grillaY(h,0,max,v=>v?"$"+(v/1e6).toFixed(1).replace(".",",")+"M":"$0")
+    + ejeX(h,d.map(s=>s.id));
+  d.forEach((s,i)=>{
+    const cx=PAD.l+step*(i+.5), dv=s.desv, lp=s.limpia, alto=lp/s.cogs>0.02;
+    o += `<rect x="${cx-bw/2}" y="${Y(dv)}" width="${bw}" height="${h-PAD.b-Y(dv)}"
+            fill="var(--noise)"><title>${s.id}: reportada ${ars(dv)}</title></rect>`;
+    o += `<rect x="${cx-bw/2}" y="${Y(lp)}" width="${bw}" height="${Math.max(h-PAD.b-Y(lp),2)}"
+            fill="${alto?'var(--clay)':'var(--deep)'}"><title>${s.id}: real ${ars(lp)} (${pct(lp/s.cogs*100)} del consumo)</title></rect>`;
+    o += `<text class="axis-txt" x="${cx}" y="${Y(lp)-6}" text-anchor="middle"
+            fill="${alto?'var(--clay)':'var(--deep)'}" style="font-weight:600">${pct(lp/s.cogs*100,1)}</text>`;
+  });
+  document.getElementById("c-desv").innerHTML = o + "</svg>";
+})();
+
+/* --- encogimiento --- */
+(function(){
+  const h=210, d=SEMANAS, min=-2.5, max=0;
+  const iw=W-PAD.l-PAD.r, step=iw/d.length;
+  const X=i=>PAD.l+step*(i+.5);
+  const Y=v=>h-PAD.b-(v-min)/(max-min)*(h-PAD.b-PAD.t);
+  let o = svgEl(h) + grillaY(h,min,max,v=>pct(v,1)) + ejeX(h,d.map(s=>s.id));
+  const pts = d.map((s,i)=>`${X(i)},${Y(s.enc)}`).join(" ");
+  o += `<polyline fill="none" stroke="var(--clay)" stroke-width="2.4" points="${pts}"/>`;
+  d.forEach((s,i)=>{const v=s.enc;
+    o += `<circle cx="${X(i)}" cy="${Y(v)}" r="3.4" fill="var(--clay)"><title>${s.id}: ${pct(v)}</title></circle>`;});
+  document.getElementById("c-enc").innerHTML = o + "</svg>";
+})();
+
+/* --- barras agrupadas: 4 semanas por barra --- */
+const SEM4 = ["10–18 ago","18–25 ago","25 ago–1 sep","1–8 sep"];
+const BARRAS4 = [
+ {n:"Barra 1",      v:[ 4.25,  1.52,  5.48,  2.31]},
+ {n:"Barra 2",      v:[-2.62, -4.19, -2.33, -0.09]},
+ {n:"Barra 3",      v:[-3.07, -0.30,  3.15,  1.28]},
+ {n:"Barra 4",      v:[ 2.11, -1.73, -0.79, -0.84]},
+ {n:"Barra 5",      v:[ 4.77,  4.98,  0.88,  3.73]},
+ {n:"Barra 6",      v:[-0.02, -0.03,  0.00, -0.05]}
+];
+const TONOS = ["#BFCFCB","#8FB0AA","#4E837D","#0F4C4A"];
+
+(function(){
+  const d=BARRAS4, h=300, min=-6, max=6;
+  const iw=W-PAD.l-PAD.r, grupo=iw/d.length, bw=Math.min(15,grupo*0.16), gap=2;
+  const Y=v=>h-PAD.b-(v-min)/(max-min)*(h-PAD.b-PAD.t);
+  let o = svgEl(h) + grillaY(h,min,max,v=>pct(v,0),6) + ejeX(h,d.map(b=>b.n));
+  o += `<line x1="${PAD.l}" y1="${Y(0)}" x2="${W-PAD.r}" y2="${Y(0)}" stroke="var(--ink)" stroke-width="1.2"/>`;
+  d.forEach((b,i)=>{
+    const cen=PAD.l+grupo*(i+.5), ancho=4*bw+3*gap;
+    b.v.forEach((v,j)=>{
+      const x=cen-ancho/2+j*(bw+gap), y0=Y(0), y1=Y(v);
+      o += `<rect x="${x}" y="${Math.min(y0,y1)}" width="${bw}" height="${Math.max(Math.abs(y1-y0),1.5)}"
+              fill="${TONOS[j]}"><title>${b.n} \u00b7 ${SEM4[j]}: ${pct(v)} sobre el consumo</title></rect>`;
+    });
+  });
+  document.getElementById("c-barras").innerHTML = o + "</svg>";
+})();
+
+/* ---------- agotamientos ---------- */
+const AGOT_TIPO = [
+ {t:"Eventos y cócteles de marca",   jul:656853,  ago:1956648},
+ {t:"Consumo interno",               jul:162585,  ago:133694},
+ {t:"Vencido / mal estado",          jul:10532,   ago:159082},
+ {t:"Cortesías",                     jul:171711,  ago:0},
+ {t:"Rotura",                        jul:60358,   ago:1513}
+];
+const AGOT_MOTIVO = [
+ ["Coctel Sábado 9/8","09/08","Depósito",427728,19.0],
+ ["Coctel Tanqueray 1/8","01/08","Depósito",418870,18.6],
+ ["Coctel Tanqueray 1/8 noche","02/08","Depósito",336803,15.0],
+ ["Coctel Johnnie Walker 29/8","30/08","Depósito",326852,14.5],
+ ["Evento Stella 15/8","16/08","Depósito",252232,11.2],
+ ["Coctel Sernova viernes 8","08/08","Depósito",194163,8.6],
+ ["Consumo personal sunset","01/08","Barra 6 - Despacho",91685,4.1],
+ ["Botellas vencidas","27–30/08","Depósito, Barra 3, Barra 6",85998,3.8],
+ ["Mal estado","09 y 29/08","Barra 2, Barra 3",36976,1.6],
+ ["Vencido / pinchados","01/08","Barra 3",36108,1.6],
+ ["Oficina","23/08","Barra 6 - Despacho",25023,1.1],
+ ["Consumo personal","08/08","Depósito",16986,0.8],
+ ["Rotura de botella","17 y 22/08","Depósito, Barra 3",1513,0.1]
+];
+
+document.getElementById("tb-agot").innerHTML = AGOT_MOTIVO.map(r=>`
+ <tr><td>${r[0]}</td><td class="muted">${r[1]}</td><td class="muted">${r[2]}</td>
+ <td class="num">${ars(r[3])}</td><td class="num">${pct(r[4],1)}</td></tr>`).join("");
+
+(function(){
+  const d=AGOT_TIPO, h=250, max=2000000;
+  const iw=W-PAD.l-PAD.r, step=iw/d.length, bw=Math.min(30,step*.30), gap=3;
+  const Y=v=>h-PAD.b-(v/max)*(h-PAD.b-PAD.t);
+  let o = svgEl(h) + grillaY(h,0,max,v=>"$"+(v/1e6).toFixed(1).replace(".",",")+"M") + ejeX(h,d.map(x=>x.t));
+  d.forEach((x,i)=>{
+    const cx=PAD.l+step*(i+.5);
+    [["jul","var(--ink-soft)",-1],["ago","var(--deep)",1]].forEach(([k,c,s])=>{
+      if(!x[k]) return;
+      o += `<rect x="${s<0 ? cx-gap/2-bw : cx+gap/2}" y="${Y(x[k])}" width="${bw}" height="${Math.max(h-PAD.b-Y(x[k]),1)}"
+              fill="${c}"><title>${x.t} — ${k==="jul"?"julio":"agosto"}: ${ars(x[k])}</title></rect>`;
+    });
+  });
+  document.getElementById("c-agot").innerHTML = o + "</svg>";
+})();
+
+document.getElementById("lg-barras").innerHTML = SEM4.map((s,j)=>
+  `<span style="color:${TONOS[j]}"><i style="background:currentColor"></i><span style="color:var(--ink-soft)">${s}</span></span>`).join("");
+
+(function(){
+  const d=SEMANAS, h=250, max=5;
+  const iw=W-PAD.l-PAD.r, step=iw/d.length, bw=Math.min(34,step*.48);
+  const Y=v=>h-PAD.b-(v/max)*(h-PAD.b-PAD.t);
+  let o = svgEl(h) + grillaY(h,0,max,v=>pct(v,0),5) + ejeX(h,d.map(s=>s.id));
+  d.forEach((s,i)=>{
+    const p=s.agot/s.cogs*100, cx=PAD.l+step*(i+.5), alto=p>3;
+    o += `<rect x="${cx-bw/2}" y="${Y(p)}" width="${bw}" height="${Math.max(h-PAD.b-Y(p),1)}"
+            fill="${alto?'var(--clay)':'var(--deep)'}"><title>${s.id}: ${ars(s.agot)} (${pct(p)} del consumo)</title></rect>`;
+  });
+  document.getElementById("c-agotsem").innerHTML = o + "</svg>";
+})();
+
+/* ---------- nav activa ---------- */
+const links = [...document.querySelectorAll("nav a")];
+const obs = new IntersectionObserver(es=>{
+  es.forEach(e=>{ if(e.isIntersecting){
+    links.forEach(a=>a.classList.toggle("on", a.getAttribute("href")==="#"+e.target.id));
+  }});
+},{rootMargin:"-10% 0px -75% 0px"});
+document.querySelectorAll("section").forEach(s=>obs.observe(s));
+</script>
+</body>
+</html>
